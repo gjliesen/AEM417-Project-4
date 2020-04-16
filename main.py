@@ -25,24 +25,35 @@ def get_imu_data(file):
     columns = ['Time','wX','wY','wZ','aX','aY','aZ']
     df = pd.read_csv(file, index_col=False, squeeze=True)
     df.columns = columns
-    df.set_index('Time', inplace=True)
     return df
 
 
-def init_ins_dataframe(index):
-    columns = ['lat', 'long', 'h', 'phi', 'theta', 'psi', 'vX', 'vY', 'vZ', 'wb_ib']
-    df = pd.DataFrame(index = index, columns=columns)
+def initialize_data(imu_df, pos_df):
+    columns=['Time', 'dt', 'lat', 'long', 'h', 'phi', 'theta', 'psi', 'vN', 'vE', 'vD']
+    df = pd.DataFrame(index = imu_df.index, columns=columns)
+    df.Time = imu_df.Time
+    df.dt = df.Time - df.Time.shift(1)
+    df.iloc[0,2] = pos_df.iloc[0,0]
+    df.iloc[0,3] = pos_df.iloc[0,1]
+    df.iloc[0,4] = pos_df.iloc[0,2]
+    df.iloc[0,5:] = 0
+    df = pd.merge(df, imu_df, on='Time')
+
     return df
+
+
+def calc_rn(a, e, l):
+    return a * (1 - e**2) / ((1 - e**2 * (np.sin(l)**2))**1.5)
+
+
+def calc_re(a, e, l):
+    return a / np.sqrt((1 - e**2 * (np.sin(l)**2)))
 
 
 def get_skew(x):
     return pd.DataFrame(data=[[0, -1* x[2][0], x[1][0]],
                      [x[2][0], 0, -1 * x[0][0]],
                      [-1 * x[1][0], x[0][0], 0]])
-
-
-def get_f_b_matrix(imu_df):
-    return imu_df[['aX', 'aY', 'aZ'], 0]
 
 
 def lat_vector(lat):
@@ -52,14 +63,6 @@ def lat_vector(lat):
 def calc_earth_rotation_matrix(lat):
     # noinspection PyTypeChecker
     return lat_vector(lat) * 7.292115 * 10**(-5)
-
-
-def calc_rn(a, e, l):
-    return a * (1 - e**2) / ((1 - e**2 * (np.sin(l)**2))**1.5)
-
-
-def calc_re(a, e, l):
-    return a / np.sqrt((1 - e**2 * (np.sin(l)**2)))
 
 
 def calc_trans_rate_matrix(rn, re, lat, h, vN):
@@ -81,19 +84,6 @@ def calc_a_nb_matrix(phi, theta):
             [0, np.sin(phi), np.cos(phi)]]
     df = pd.DataFrame(data)
     df *= (1/np.cos(theta))
-    return df
-
-
-def calc_wb_ib_matrix(imu_df):
-    return imu_df[['wX', 'wY', 'wZ'], 0]
-
-
-def initialize_data(imu_df, pos_df):
-    df = pd.DataFrame(index = imu_df.index)
-    df.iloc[0,0] = pos_df.iloc[0,0]
-    df.iloc[0,1] = pos_df.iloc[0,1]
-    df.iloc[0,2] = pos_df.iloc[0,2]
-    df.iloc[0,9] = calc_wb_ib_matrix(imu_df)
     return df
 
 
@@ -148,12 +138,11 @@ def ins_formulation(imu_df, pos_df, vel_df, time_df):
     omega_ei = 7.292115 * 10**(-5)
     rn = calc_rn(a, e, lat)
     re = calc_re(a, e, lat)
-    phi = ins_df.iloc[0, 3]
-    theta = ins_df.iloc[0, 4]
-    psi = ins_df.iloc[0, 5]
+    phi = ins_df.iloc[0, 4]
+    theta = ins_df.iloc[0, 5]
+    psi = ins_df.iloc[0, 6]
     c_bn = calc_c_bn_matrix(phi, theta, psi)
-    f_b = get_f_b_matrix(imu_df)
-
+    print('Done')
 
 
 
