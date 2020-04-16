@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import time
+import numexpr
 
 start_time = time.time()
 
@@ -137,7 +138,7 @@ def ins_formulation(imu_df, pos_df, vel_df, time_df):
     f = 1 / 298.257223563
     e = np.sqrt(f * (2 - f))
     u_e = 3.986004418 * 10 ** 14
-    omega_ei = 7.292115 * 10 ** (-5)
+    omega_ei = 7.292115 * 10 **(-5)
 
     flag = True
     for cur in ins_df.index:
@@ -151,8 +152,10 @@ def ins_formulation(imu_df, pos_df, vel_df, time_df):
             phi = ins_df.phi.loc[prev]
             theta = ins_df.theta.loc[prev]
             psi = ins_df.theta.loc[prev]
-            psi_nb = ins_df.loc[prev, ['phi', 'theta', 'psi']].T
-            wb_ib = ins_df.loc[prev, ['aX', 'aY', 'aZ']].T
+            psi_nb = ins_df.loc[prev, ['phi', 'theta', 'psi']]
+            print(psi_nb)
+            wb_ib = ins_df.loc[prev, ['aX', 'aY', 'aZ']]
+            print(wb_ib)
             vN = ins_df.loc[prev, 'vN']
             dt = ins_df.dt.loc[cur]
             rn = calc_rn(a, e, lat)
