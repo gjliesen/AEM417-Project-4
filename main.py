@@ -2,18 +2,18 @@ import pandas as pd
 import numpy as np
 import time
 
-start_time = time.time()
 
 
-def get_vel_data(file):
-    columns = ['vN', 'vE', 'vD']
+
+def get_pos_data(file):
+    columns = ['lat', 'long', 'h']
     df = pd.read_csv(file, index_col=False, squeeze=True)
     df.columns = columns
     return df
 
 
-def get_pos_data(file):
-    columns = ['lat', 'long', 'h']
+def get_vel_data(file):
+    columns = ['vN', 'vE', 'vD']
     df = pd.read_csv(file, index_col=False, squeeze=True)
     df.columns = columns
     return df
