@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
-import cProfile
+import constants as cn
+
+
+# import cProfile
 
 
 def get_pos_data(file):
@@ -44,12 +47,12 @@ def initialize_ins_data(imu_df, pos_df):
     return ins_df
 
 
-def calc_rn(a, e, lat):
-    return a * (1 - e ** 2) / ((1 - e ** 2 * (np.sin(lat) ** 2)) ** 1.5)
+def calc_rn(lat):
+    return cn.a * (1 - cn.e ** 2) / ((1 - cn.e ** 2 * (np.sin(lat) ** 2)) ** 1.5)
 
 
-def calc_re(a, e, lat):
-    return a / np.sqrt((1 - e ** 2 * (np.sin(lat) ** 2)))
+def calc_re(lat):
+    return cn.a / np.sqrt((1 - cn.e ** 2 * (np.sin(lat) ** 2)))
 
 
 def get_skew(x):
@@ -94,37 +97,35 @@ def calc_a_nb_matrix(phi, theta):
     return a_nb
 
 
-def attitude_update(phi, theta, wb_ib, c_bn, psi_nb, dt, wn_ie, wn_en):
+def attitude_update(phi, theta, wb_ib, c_bn, psi_nb, wn_ie, wn_en, dt):
     wb_in = c_bn @ (wn_ie + wn_en)
     a_nb = calc_a_nb_matrix(phi, theta)
     wb_nb = wb_ib - wb_in
     return (psi_nb + dt * a_nb @ wb_nb).T
 
 
-def calc_ch(a, omega, h, f, u_e):
-    temp_1 = a ** 3 * (1 - f) * omega ** 2
-    temp_2 = h / a
-    return 1 - 2 * (1 + f + (temp_1 / u_e)) * temp_2 + 3 * temp_2 ** 2
+def calc_ch(h):
+    temp_1 = cn.a ** 3 * (1 - cn.f) * cn.omega_ei ** 2
+    temp_2 = h / cn.a
+    return 1 - 2 * (1 + cn.f + (temp_1 / cn.u_e)) * temp_2 + 3 * temp_2 ** 2
 
 
-def calc_go(f, lat):
-    return (9.7803253359 / np.sqrt(1 - f * (2 - f) * (np.sin(lat) ** 2))) * (1 + 0.0019311853 * (np.sin(lat) ** 2))
+def calc_go(lat):
+    return (9.7803253359 / np.sqrt(1 - cn.f * (2 - cn.f) * (np.sin(lat) ** 2))) * (1 + 0.0019311853 *
+                                                                                   (np.sin(lat) ** 2))
 
 
-def g_n_matrix(f, lat, a, omega_ei, h, u_e):
-    go = calc_go(f, lat)
-    ch = calc_ch(a, omega_ei, h, f, u_e)
+def g_n_matrix(lat, h):
+    go = calc_go(lat)
+    ch = calc_ch(h)
     return np.array([[0],
                      [0],
                      [go * ch]])
 
 
-def velocity_update(f, lat, a, omega_ei, h, u_e, wn_ie, wn_en, c_bn, wb_ib, v_n, dt):
-    acc_bias = np.array([[0.25],
-                         [0.055],
-                         [-0.12]])
-    f_b = wb_ib + acc_bias
-    g_n = g_n_matrix(f, lat, a, omega_ei, h, u_e)
+def velocity_update(h, lat, wn_ie, wn_en, c_bn, wb_ib, v_n, dt):
+    f_b = wb_ib + cn.acc_bias
+    g_n = g_n_matrix(lat, h)
     f_n = c_bn @ f_b
     v_n_dot = f_n + g_n - get_skew(((2 * wn_ie) - wn_en)) @ v_n
     return v_n + dt * v_n_dot
@@ -136,17 +137,12 @@ def pe_matrix(rn, re, h, lat):
                      [0, 0, -1]])
 
 
-def position_update(rn, re, h, lat):
+def position_update(rn, re, h, lat, p_e, v_n, dt):
     pe_mat = pe_matrix(rn, re, h, lat)
+    return p_e + dt * pe_mat @ v_n
 
 
-def ins_formulation(ins_df, vel_df, time_df):
-    a = 6378137
-    f = 1 / 298.257223563
-    e = np.sqrt(f * (2 - f))
-    u_e = 3.986004418 * 10 ** 14
-    omega_ei = 7.292115 * 10 ** (-5)
-
+def ins_formulation(ins_df):
     flag = True
     prev = np.nan
     for cur in ins_df.index:
@@ -156,31 +152,38 @@ def ins_formulation(ins_df, vel_df, time_df):
         else:
             # Constants
             lat = ins_df.lat.loc[prev]
-            long = ins_df.long.loc[prev]
             h = ins_df.h.loc[prev]
             phi = ins_df.phi.loc[prev]
             theta = ins_df.theta.loc[prev]
             psi = ins_df.theta.loc[prev]
             vN = ins_df.loc[prev, 'vN']
             dt = ins_df.dt.loc[cur]
-            rn = calc_rn(a, e, lat)
-            re = calc_re(a, e, lat)
-            # Arrays
+            rn = calc_rn(lat)
+            re = calc_re(lat)
 
+            # Arrays
             psi_nb = ins_df.loc[prev, ['phi', 'theta', 'psi']]
             psi_nb = psi_nb.to_numpy().reshape((-1, 1))
             wb_ib = ins_df.loc[prev, ['aX', 'aY', 'aZ']]
             wb_ib = wb_ib.to_numpy().reshape((-1, 1))
             v_n = ins_df.loc[prev, ['vN', 'vE', 'vD']]
             v_n = v_n.to_numpy().reshape((-1, 1))
+            p_e = ins_df.loc[prev, ['lat', 'long', 'h']]
+            p_e = p_e.to_numpy().reshape((-1, 1))
+
+            # Function Calls
             wn_ie = calc_earth_rotation_matrix(lat)
             wn_en = calc_trans_rate_matrix(rn, re, lat, h, vN)
-            #
-            # print(wb_ib)
             c_bn = calc_c_bn_matrix(phi, theta, psi)
-            ins_df.loc[cur, ['phi', 'theta', 'psi']] = attitude_update(phi, theta, wb_ib, c_bn, psi_nb, dt).flatten()
-            ins_df.loc[cur, ['vN', 'vE', 'vD']] = velocity_update(f, lat, a, omega_ei, h, u_e,
-                                                                  wn_ie, wn_en, c_bn, wb_ib, v_n, dt).flatten()
+
+            # Results
+            ins_df.loc[cur, ['phi', 'theta', 'psi']] = attitude_update(phi, theta, wb_ib, c_bn, psi_nb, wn_ie,
+                                                                       wn_en, dt).flatten()
+            v_n_cur = velocity_update(h, lat, wn_ie, wn_en, c_bn, wb_ib, v_n, dt)
+            ins_df.loc[cur, ['vN', 'vE', 'vD']] = v_n_cur.flatten()
+            ins_df.loc[cur, ['lat', 'long', 'h']] = position_update(rn, re, h, lat, p_e, v_n, dt).flatten()
+
+            # Iterate
             prev = cur
     print('Done')
 
@@ -189,11 +192,11 @@ def main():
     # Parse data
 
     pos_df = get_pos_data('gps_pos_lla.txt')
-    vel_df = get_vel_data('gps_vel_ned.txt')
+    # vel_df = get_vel_data('gps_vel_ned.txt')
     imu_df = get_imu_data('imu.txt')
-    time_df = get_time_data('time.txt')
+    # time_df = get_time_data('time.txt')
     ins_df = initialize_ins_data(imu_df, pos_df)
-    ins_formulation(ins_df, vel_df, time_df)
+    ins_formulation(ins_df)
 
 
 main()
