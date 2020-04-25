@@ -4,7 +4,6 @@ import time
 
 
 
-
 def get_pos_data(file):
     columns = ['lat', 'long', 'h']
     df = pd.read_csv(file, index_col=False, squeeze=True)
@@ -19,15 +18,15 @@ def get_vel_data(file):
     return df
 
 
-def get_time_data(file):
-    df = pd.read_csv(file, index_col=False, squeeze=True)
-    return df
-
-
 def get_imu_data(file):
     columns = ['Time', 'wX', 'wY', 'wZ', 'aX', 'aY', 'aZ']
     df = pd.read_csv(file, index_col=False, squeeze=True)
     df.columns = columns
+    return df
+
+
+def get_time_data(file):
+    df = pd.read_csv(file, index_col=False, squeeze=True)
     return df
 
 
