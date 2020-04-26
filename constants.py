@@ -1,4 +1,12 @@
 import numpy as np
+
+
+def get_skew(x):
+    return np.array([[0, -1 * x[2][0], x[1][0]],
+                     [x[2][0], 0, -1 * x[0][0]],
+                     [-1 * x[1][0], x[0][0], 0]])
+
+
 g = 9.8
 a: float = 6378137
 f = 1 / 298.257223563
@@ -10,12 +18,15 @@ vel_std = 0.2
 acc_bias = np.array([[0.25],
                      [0.055],
                      [-0.12]])
-acc_bias_std = 0.0005 * g
+sigma_b_acc = 0.0005 * g
 tau_acc = 300
-acc_noise_std = 0.12 * g
+sigma_w_acc = 0.12 * g
 gyro_bias = np.array([[2.4*10**-4],
                       [-1.3*10**-4],
                       [5.6*10**-4]])
-gyro_bias_std = 0.3
+sigma_b_gyro = 0.3
 tau_gyro = 300
-gyro_noise_std = 0.95
+sigma_w_gyro = 0.95
+
+sigma_u_acc = np.sqrt((2 * sigma_b_acc**2)/tau_acc)
+sigma_u_gyro = np.sqrt((2 * sigma_b_gyro**2)/tau_gyro)
