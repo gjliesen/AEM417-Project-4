@@ -15,11 +15,18 @@ def state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in):
                       np.zeros((3, 3))])
     row_5 = np.array([np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3)), (-1 / cn.tau_gyro) *
                       np.identity(3)])
-    temp_1 = np.vstack((row_1, row_2))
-    temp_2 = np.vstack((row_3, row_4))
-    temp_3 = np.vstack((temp_1, temp_2))
-    A = np.vstack((temp_3, row_4))
+    A = np.vstack((row_1, row_2, row_3, row_4, row_5))
     return A
+
+
+def noise_model_matrix_m(c_nb):
+    row_1 = np.array([np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3))])
+    row_2 = np.array([c_nb, np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3))])
+    row_3 = np.array([np.zeros((3, 3)), -1 * c_nb, np.zeros((3, 3)), np.zeros((3, 3))])
+    row_4 = np.array([np.zeros((3, 3)), np.zeros((3, 3)), np.identity(3), np.zeros((3, 3))])
+    row_5 = np.array([np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3)), np.identity(3)])
+    M = np.vstack((row_1, row_2, row_3, row_4, row_5))
+    return M
 
 
 def calc_wn_in(wn_ie, wn_en):
