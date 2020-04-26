@@ -57,7 +57,6 @@ def main():
     pos_df = get_pos_data('gps_pos_lla.txt')
     vel_df = get_vel_data('gps_vel_ned.txt')
     imu_df = get_imu_data('imu.txt')
-    # time_df = get_time_data('time.txt')
     ins_df = initialize_ins_data(imu_df, pos_df, vel_df)
     ins_df = ins.ins_formulation(ins_df)
 

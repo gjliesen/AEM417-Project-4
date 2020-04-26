@@ -16,4 +16,3 @@ def pe_matrix(rn, re, h, lat):
 def update(rn, re, h, lat, p_e, v_n, dt):
     pe_mat = pe_matrix(rn, re, h, lat)
     return p_e + dt * pe_mat @ v_n
-

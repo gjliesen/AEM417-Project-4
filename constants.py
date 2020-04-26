@@ -13,8 +13,8 @@ f = 1 / 298.257223563
 e = np.sqrt(f * (2 - f))
 u_e = 3.986004418 * 10 ** 14
 omega_ei = 7.292115 * 10 ** (-5)
-pos_std = 3
-vel_std = 0.2
+sigma_p = 3
+sigma_v = 0.2
 acc_bias = np.array([[0.25],
                      [0.055],
                      [-0.12]])
