@@ -1,4 +1,5 @@
 import numpy as np
+import constants as cn
 
 
 def extract_data(df, time):
@@ -18,5 +19,5 @@ def calc_a_nb_matrix(phi, theta):
 def get(phi, theta, wb_ib, c_bn, psi_nb, wn_ie, wn_en, dt):
     wb_in = c_bn @ (wn_ie + wn_en)
     a_nb = calc_a_nb_matrix(phi, theta)
-    wb_nb = wb_ib - wb_in
+    wb_nb = wb_ib - wb_in + cn.gyro_bias
     return (psi_nb + dt * a_nb @ wb_nb).T

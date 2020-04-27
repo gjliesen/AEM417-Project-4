@@ -50,7 +50,7 @@ def get_values(ins_df, prev, psi_nb, p_e, v_n):
     wn_en = calc_trans_rate_matrix(rn, re, p_e[0][0], p_e[2][0], v_n[0][0])
     c_bn = calc_c_bn_matrix(psi_nb[0][0], psi_nb[1][0], psi_nb[2][0])
     g_n = velocity.g_n_matrix(p_e[0][0], p_e[1][0])
-    wb_ib = ins_df.loc[prev, ['aX', 'aY', 'aZ']]
+    wb_ib = ins_df.loc[prev, ['wX', 'wY', 'wZ']]
     wb_ib = wb_ib.to_numpy().reshape((-1, 1))
     return [rn, re, wn_ie, wn_en, c_bn, g_n, wb_ib]
 
@@ -98,7 +98,7 @@ def solve(ins_df, pos_df, vel_df):
             p_e = position.extract_data(ins_df, prev)
 
             # Gather variables
-            [rn, re, wn_ie, wn_en, c_bn, g_n, wb_ib] = get_values(ins_df, prev, psi_nb, v_n, p_e)
+            [rn, re, wn_ie, wn_en, c_bn, g_n, wb_ib] = get_values(ins_df, prev, psi_nb, p_e, v_n)
 
             # Predictions
             [ins_df, att_cur, v_n_cur, pos_cur] = ins_formulation(ins_df, psi_nb, p_e, v_n, wb_ib, c_bn, wn_ie,
