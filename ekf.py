@@ -14,10 +14,6 @@ def calc_wn_in(wn_ie, wn_en):
     return wn_ie + wn_en
 
 
-def calc_wb_nb(wn_in, wb_ib):
-    return wb_ib - wn_in + cn.gyro_bias
-
-
 def state_matrix_a(wn_en, g_n, wn_ie, c_bn, f_b, wn_in):
     row_1 = np.hstack((-1 * cn.get_skew(wn_en), np.identity(3), np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3))))
     row_2 = np.hstack(((np.abs(g_n) / cn.a) * np.diag([-1, 1, 2]), -1 * cn.get_skew(2 * wn_ie + wn_en),
@@ -77,7 +73,6 @@ def gnss_vs_predicted(del_x, v_n_cur):
 def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, c_bn, dt, wn_ie, wn_en, wb_ib, g_n, pos_gps, vel_gps):
     f_b = get_fb(wb_ib)
     wn_in = calc_wn_in(wn_ie, wn_en)
-    wb_nb = calc_wb_nb(wn_in, wb_ib)
     pos_ref = position.extract_data(pos_df, pos_df.index[0])
     pos_cur_ned = lla2ned(pos_cur[0][0], pos_cur[1][0], pos_cur[2][0], pos_ref[0][0], pos_ref[1][0], pos_ref[2][0])
     pos_gps_ned = lla2ned(pos_gps[0][0], pos_gps[1][0], pos_gps[2][0], pos_ref[0][0], pos_ref[1][0], pos_ref[2][0])

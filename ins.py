@@ -90,6 +90,7 @@ def solve(ins_df, pos_df, vel_df):
             prev = cur
             flag = False
         else:
+            print(cur)
             dt = ins_df.dt.loc[cur]
 
             # previous data
