@@ -2,7 +2,7 @@ import numpy as np
 
 
 def extract_data(df, time):
-    df = df.loc[time, ['lat', 'long', 'h']]
+    df = df.loc[time, ['phi', 'theta', 'psi']]
     df = df.to_numpy().reshape((-1, 1))
     return df
 
@@ -15,7 +15,7 @@ def calc_a_nb_matrix(phi, theta):
     return a_nb
 
 
-def update(phi, theta, wb_ib, c_bn, psi_nb, wn_ie, wn_en, dt):
+def get(phi, theta, wb_ib, c_bn, psi_nb, wn_ie, wn_en, dt):
     wb_in = c_bn @ (wn_ie + wn_en)
     a_nb = calc_a_nb_matrix(phi, theta)
     wb_nb = wb_ib - wb_in

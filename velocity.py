@@ -27,7 +27,7 @@ def g_n_matrix(lat, h):
                      [go * ch]])
 
 
-def update(h, lat, wn_ie, wn_en, c_bn, wb_ib, v_n, dt):
+def get(h, lat, wn_ie, wn_en, c_bn, wb_ib, v_n, dt):
     f_b = wb_ib + cn.acc_bias
     g_n = g_n_matrix(lat, h)
     f_n = c_bn @ f_b

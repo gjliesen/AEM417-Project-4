@@ -1,7 +1,7 @@
 import pandas as pd
-import ins_formulation as ins
+import ins
 # import numpy as np
-# import constants as cn
+import constants as cn
 
 
 # import cProfile
@@ -53,12 +53,13 @@ def initialize_ins_data(imu_df, pos_df, vel_df):
 
 def main():
     # Parse data
-
-    pos_df = get_pos_data('gps_pos_lla.txt')
-    vel_df = get_vel_data('gps_vel_ned.txt')
     imu_df = get_imu_data('imu.txt')
+    pos_df = get_pos_data('gps_pos_lla.txt')
+    pos_df.index = imu_df.Time
+    vel_df = get_vel_data('gps_vel_ned.txt')
+    vel_df.index = imu_df.Time
     ins_df = initialize_ins_data(imu_df, pos_df, vel_df)
-    ins_df = ins.ins_formulation(ins_df)
+    ins_df = ins.solve(ins_df, pos_df, vel_df)
 
 
 main()
