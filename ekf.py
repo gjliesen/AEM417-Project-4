@@ -9,7 +9,7 @@ from scipy.linalg import expm
 
 def state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in):
     row_1 = np.array([-1 * cn.get_skew(wn_en), np.identity(3), np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3))])
-    row_2 = np.array([(np.abs(g_n)/cn.a) * np.diagonal(-1, 1, 2), -1 * cn.get_skew(2 * wn_ie + wn_en),
+    row_2 = np.array([(np.abs(g_n) / cn.a) * np.diagonal(-1, 1, 2), -1 * cn.get_skew(2 * wn_ie + wn_en),
                       cn.get_skew(c_nb @ f_b), c_nb, np.zeros((3, 3))])
     row_3 = np.array([np.zeros((3, 3)), np.zeros((3, 3)), -1 * cn.get_skew(wn_in), np.zeros((3, 3)), -1 * c_nb])
     row_4 = np.array([np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3)), (-1 / cn.tau_acc) * np.identity(3),
@@ -30,8 +30,12 @@ def noise_model_matrix_m(c_nb):
     return M
 
 
-def noise_covariance_q(A, M, dt):
+def f_matrix(A, dt):
     F = expm(A * dt)
+    return F
+
+
+def noise_covariance_q(A, M, dt):
     Q = (np.identity(15) + dt * A) @ (dt * M @ cn.S @ M.T)
     return Q
 
@@ -55,10 +59,15 @@ def noise_gain_matrix_k(p_kk):
     return K
 
 
-def loose_state_matrix(pos_df, vel_df, ins_df, cur, att_cur, v_n_cur, pos_cur, psi_nb):
+def loose_state_matrix(pos_df, vel_df, cur, v_n_cur, pos_cur, K):
     pos_gps = position.extract_data(pos_df, cur)
     vel_gps = velocity.extract_data(vel_df, cur)
-    del_x = np.array([[pos_gps - pos_cur],
-                      [vel_gps - v_n_cur],
-                      [psi_nb]])
-    print('placeholder')
+    temp = np.array([[pos_gps - pos_cur],
+                     [vel_gps - v_n_cur]])
+    del_x = K @ temp
+    return del_x
+
+def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, K, c_nb):
+    state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in)
+    noise_model_matrix_m(c_nb)
+    noise_covariance_q(A, M, dt)
