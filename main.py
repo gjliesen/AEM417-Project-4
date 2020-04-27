@@ -1,11 +1,6 @@
 import pandas as pd
 import ins
-# import numpy as np
 import constants as cn
-
-
-# import cProfile
-
 
 def get_pos_data(file):
     columns = ['lat', 'long', 'h']
@@ -34,7 +29,7 @@ def get_time_data(file):
 
 
 def initialize_ins_data(imu_df, pos_df, vel_df):
-    columns = ['Time', 'dt', 'lat', 'long', 'h', 'phi', 'theta', 'psi', 'vN', 'vE', 'vD']
+    columns = ['Time', 'dt', 'lat', 'long', 'h', 'phi', 'theta', 'psi', 'vN', 'vE', 'vD', 'acc_bias', 'gyro_bias']
     ins_df = pd.DataFrame(index=imu_df.index, columns=columns)
     ins_df.Time = imu_df.Time
     ins_df.dt = ins_df.Time - ins_df.Time.shift(1)
@@ -47,6 +42,8 @@ def initialize_ins_data(imu_df, pos_df, vel_df):
     ins_df.vN.iat[0] = vel_df.vN.iat[0]
     ins_df.vE.iat[0] = vel_df.vE.iat[0]
     ins_df.vD.iat[0] = vel_df.vD.iat[0]
+    ins_df.acc_bias.iat[0] = cn.acc_bias
+    ins_df.gyro_bias.iat[0] = cn.gyro_bias
     ins_df.iloc[0, 4:7] = 0
     return ins_df
 

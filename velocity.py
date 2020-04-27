@@ -27,9 +27,11 @@ def g_n_matrix(lat, h):
                      [go * ch]])
 
 
-def get(h, lat, wn_ie, wn_en, c_bn, wb_ib, v_n, dt):
-    f_b = wb_ib + cn.acc_bias
+def get(ins_df, prev, h, lat, wn_ie, wn_en, c_bn, v_n, dt, acc_bias):
+    f_b = ins_df.loc[prev, ['aX', 'aY', 'aZ']]
+    f_b = f_b.to_numpy().reshape((-1, 1))
+    f_b = f_b + acc_bias
     g_n = g_n_matrix(lat, h)
     f_n = c_bn @ f_b
-    v_n_dot = f_n + g_n - cn.get_skew(((2 * wn_ie) - wn_en)) @ v_n
+    v_n_dot = f_n + g_n - cn.get_skew((2 * wn_ie - wn_en)) @ v_n
     return v_n + dt * v_n_dot

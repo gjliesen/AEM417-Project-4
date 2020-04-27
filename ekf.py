@@ -1,12 +1,21 @@
 import numpy as np
 import constants as cn
 from scipy.linalg import expm
-from navpy import lla2ned
+import numpy.linalg as la
+import navpy
 import position
+import pandas as pd
 
 
-def get_fb(wb_ib):
-    f_b = wb_ib + cn.acc_bias
+def extract_data(df, time):
+    df = df.loc[time, ['aX', 'aY', 'aZ']]
+    df = df.to_numpy().reshape((-1, 1))
+    return df
+
+
+def get_fb(imu_df, cur, acc_bias):
+    f_b = extract_data(imu_df, cur)
+    f_b += acc_bias
     return f_b
 
 
@@ -16,7 +25,7 @@ def calc_wn_in(wn_ie, wn_en):
 
 def state_matrix_a(wn_en, g_n, wn_ie, c_bn, f_b, wn_in):
     row_1 = np.hstack((-1 * cn.get_skew(wn_en), np.identity(3), np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3))))
-    row_2 = np.hstack(((np.abs(g_n) / cn.a) * np.diag([-1, 1, 2]), -1 * cn.get_skew(2 * wn_ie + wn_en),
+    row_2 = np.hstack((np.diag((-1, -1, 2)) * la.norm(g_n) / cn.a, -1 * cn.get_skew(2 * wn_ie + wn_en),
                        cn.get_skew(c_bn @ f_b), c_bn, np.zeros((3, 3))))
     row_3 = np.hstack((np.zeros((3, 3)), np.zeros((3, 3)), -1 * cn.get_skew(wn_in), np.zeros((3, 3)), -1 * c_bn))
     row_4 = np.hstack((np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3)), (-1 / cn.tau_acc) * np.identity(3),
@@ -58,9 +67,14 @@ def noise_gain_matrix_k(p_kk):
     return K
 
 
-def loose_state_matrix(v_n_cur, pos_cur, K, pos_gps, vel_gps):
-    temp = np.vstack((pos_gps - pos_cur,
-                     vel_gps - v_n_cur))
+def loose_state_matrix(v, pos, K, pos_gps, vel_gps):
+    temp2 = np.array([[pos[0][0] - pos_gps[0][0]],
+                      [pos[1][0] - pos_gps[1][0]],
+                      [pos[2][0] - pos_gps[2][0]]])
+    temp1 = np.array([[v[0][0] - vel_gps[0][0]],
+                      [v[1][0] - vel_gps[1][0]],
+                      [v[2][0] - vel_gps[2][0]]])
+    temp = np.vstack((temp2, temp1))
     del_x = K @ temp
     return del_x
 
@@ -70,14 +84,32 @@ def gnss_vs_predicted(del_x, v_n_cur):
     return del_y
 
 
-def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, c_bn, dt, wn_ie, wn_en, wb_ib, g_n, pos_gps, vel_gps):
-    f_b = get_fb(wb_ib)
+def get_state(ins_df, pos_df, vel_df, cur, v_n_cur, pos_cur, c_bn, dt, wn_ie, wn_en, wb_ib, g_n, pos_gps, vel_gps,
+              acc_bias):
+    f_b = get_fb(ins_df, cur, acc_bias)
     wn_in = calc_wn_in(wn_ie, wn_en)
-    pos_ref = position.extract_data(pos_df, pos_df.index[0])
-    pos_cur_ned = lla2ned(pos_cur[0][0], pos_cur[1][0], pos_cur[2][0], pos_ref[0][0], pos_ref[1][0], pos_ref[2][0])
-    pos_gps_ned = lla2ned(pos_gps[0][0], pos_gps[1][0], pos_gps[2][0], pos_ref[0][0], pos_ref[1][0], pos_ref[2][0])
+    wn_in_df = pd.DataFrame(data=wn_in)
+
+    pos_cur_ned = navpy.lla2ned(pos_cur[0][0],
+                                pos_cur[1][0],
+                                pos_cur[2][0],
+                                cn.pos_ref[0][0],
+                                cn.pos_ref[1][0],
+                                cn.pos_ref[2][0],
+                                latlon_unit='rad', alt_unit='m', model='wgs84')
+    pos_gps_ned = navpy.lla2ned(pos_gps[0][0],
+                                pos_gps[1][0],
+                                pos_gps[2][0],
+                                cn.pos_ref[0][0],
+                                cn.pos_ref[1][0],
+                                cn.pos_ref[2][0],
+                                latlon_unit='rad',
+                                alt_unit='m',
+                                model='wgs84')
+
     pos_cur_ned = pos_cur_ned.reshape((-1, 1))
     pos_gps_ned = pos_gps_ned.reshape((-1, 1))
+
     A = state_matrix_a(wn_en, g_n, wn_ie, c_bn, f_b, wn_in)
     M = noise_model_matrix_m(c_bn)
     F = get_f_matrix(A, dt)
@@ -85,4 +117,28 @@ def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, c_bn, dt, wn_ie, wn_en, wb_
     p_kk = calc_position_p_kk(pos_cur_ned, F, Q)
     K = noise_gain_matrix_k(p_kk)
     del_x = loose_state_matrix(v_n_cur, pos_cur_ned, K, pos_gps_ned, vel_gps)
+    p_kk = (np.identity(15) - K @ cn.H) @ p_kk
+    cn.p_init = p_kk
     return del_x
+
+
+def get_pos(ins_df, pos_df, vel_df, cur, v_n_cur, pos_cur, c_bn, dt, wn_ie, wn_en, wb_ib, g_n, pos_gps, vel_gps,
+            acc_bias):
+    f_b = get_fb(ins_df, cur, acc_bias)
+    wn_in = calc_wn_in(wn_ie, wn_en)
+    wn_in_df = pd.DataFrame(data=wn_in)
+    pos_ref = position.extract_data(pos_df, pos_df.index[0])
+    pos_cur_ned = navpy.lla2ned(pos_cur[0][0], pos_cur[1][0], pos_cur[2][0], pos_ref[0][0], pos_ref[1][0],
+                                pos_ref[2][0],
+                                latlon_unit='rad', alt_unit='m', model='wgs84')
+    pos_gps_ned = navpy.lla2ned(pos_gps[0][0], pos_gps[1][0], pos_gps[2][0], pos_ref[0][0], pos_ref[1][0],
+                                pos_ref[2][0],
+                                latlon_unit='rad', alt_unit='m', model='wgs84')
+    pos_cur_ned = pos_cur_ned.reshape((-1, 1))
+    pos_gps_ned = pos_gps_ned.reshape((-1, 1))
+    A = state_matrix_a(wn_en, g_n, wn_ie, c_bn, f_b, wn_in)
+    M = noise_model_matrix_m(c_bn)
+    F = get_f_matrix(A, dt)
+    Q = noise_covariance_q(A, M, dt)
+    p_kk = calc_position_p_kk(pos_cur_ned, F, Q)
+    return p_kk
