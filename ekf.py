@@ -44,8 +44,15 @@ def calc_wb_nb(wn_in, wb_ib):
     return wb_ib - wn_in + cn.gyro_bias
 
 
-def noise_gain_matrix():
-    print('Placeholder')
+def calc_position_p_kk(pos_cur, F, Q):
+    p_kk = F @ pos_cur @ F.T + Q
+    p_kk = 0.5 * (p_kk + p_kk.T)
+    return p_kk
+
+
+def noise_gain_matrix_k(p_kk):
+    K = p_kk @ cn.H.T @ np.linalg.inv(H @ p_kk @ cn.H.T + cn.R)
+    return K
 
 
 def loose_state_matrix(pos_df, vel_df, ins_df, cur, att_cur, v_n_cur, pos_cur, psi_nb):
