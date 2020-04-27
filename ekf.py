@@ -3,6 +3,7 @@ import constants as cn
 import velocity
 import position
 from scipy.linalg import expm
+from navpy import lla2ned
 
 
 def calc_wn_in(wn_ie, wn_en):
@@ -53,7 +54,7 @@ def calc_position_p_kk(pos_cur, F, Q):
 
 
 def noise_gain_matrix_k(p_kk):
-    K = p_kk @ cn.H.T @ np.linalg.inv(H @ p_kk @ cn.H.T + cn.R)
+    K = p_kk @ cn.H.T @ np.linalg.inv(cn.H @ p_kk @ cn.H.T + cn.R)
     return K
 
 
@@ -71,9 +72,12 @@ def gnss_vs_predicted(del_x, v_n_cur):
     return del_y
 
 
-def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, c_nb, dt, wn_ie, wn_en, wn_in, wb_ib, g_n, f_b):
+def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, c_nb, dt, wn_ie, wn_en, wb_ib, g_n, f_b):
+
     wn_in = calc_wn_in(wn_ie, wn_en)
     wb_nb = calc_wb_nb(wn_in, wb_ib)
+    pos_cur = lla2ned(pos_cur[0][0], pos_cur[0][1], pos_cur[0][2])
+    v_n_cur = lla2ned(v_n_cur[0][0], v_n_cur[0][1], v_n_cur[0][2])
     A = state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in)
     M = noise_model_matrix_m(c_nb)
     F = get_f_matrix(A, dt)

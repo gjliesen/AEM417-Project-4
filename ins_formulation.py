@@ -41,6 +41,25 @@ def calc_c_bn_matrix(phi, theta, psi):
     return c_bn
 
 
+def get_values(psi_nb, p_e, v_n):
+    rn = calc_rn(psi_nb[0][0])
+    re = calc_re(psi_nb[0][0])
+    wn_ie = calc_earth_rotation_matrix(p_e[0][0])
+    wn_en = calc_trans_rate_matrix(rn, re, p_e[0][0], p_e[0][2], v_n[0][0])
+    c_bn = calc_c_bn_matrix(psi_nb[0][0], psi_nb[0][1], psi_nb[0][2])
+    return [rn, re, wn_ie, wn_en, c_bn]
+
+
+def update_predictions(ins_df, psi_nb, p_e, v_n, wb_ib, c_bn, wn_ie, wn_en, dt, rn, re, cur):
+    att_cur = attitude.update(psi_nb[0][0], psi_nb[0][1], wb_ib, c_bn, psi_nb, wn_ie, wn_en, dt)
+    ins_df.loc[cur, ['phi', 'theta', 'psi']] = att_cur.flatten()
+    v_n_cur = velocity.update(p_e[0][2], p_e[0][0], wn_ie, wn_en, c_bn, wb_ib, v_n, dt)
+    ins_df.loc[cur, ['vN', 'vE', 'vD']] = v_n_cur.flatten()
+    pos_cur = position.update(rn, re, p_e[0][2], p_e[0][0], p_e, v_n, dt)
+    ins_df.loc[cur, ['lat', 'long', 'h']] = pos_cur.flatten()
+    return [ins_df, att_cur, v_n_cur, pos_cur]
+
+
 def ins_formulation(ins_df):
     flag = True
     prev = np.nan
@@ -49,18 +68,9 @@ def ins_formulation(ins_df):
             prev = cur
             flag = False
         else:
-            # Constants
-            lat = ins_df.lat.loc[prev]
-            h = ins_df.h.loc[prev]
-            phi = ins_df.phi.loc[prev]
-            theta = ins_df.theta.loc[prev]
-            psi = ins_df.theta.loc[prev]
-            vN = ins_df.loc[prev, 'vN']
             dt = ins_df.dt.loc[cur]
-            rn = calc_rn(lat)
-            re = calc_re(lat)
 
-            # main arrays
+            # previous data
             psi_nb = attitude.extract_data(ins_df, prev)
             v_n = velocity.extract_data(ins_df, prev)
             p_e = position.extract_data(ins_df, prev)
@@ -68,19 +78,13 @@ def ins_formulation(ins_df):
             # build accelerometer array
             wb_ib = ins_df.loc[prev, ['aX', 'aY', 'aZ']]
             wb_ib = wb_ib.to_numpy().reshape((-1, 1))
-            # Function Calls
-            wn_ie = calc_earth_rotation_matrix(lat)
-            wn_en = calc_trans_rate_matrix(rn, re, lat, h, vN)
-            c_bn = calc_c_bn_matrix(phi, theta, psi)
 
-            # Results
-            att_cur = attitude.update(phi, theta, wb_ib, c_bn, psi_nb, wn_ie, wn_en, dt)
-            ins_df.loc[cur, ['phi', 'theta', 'psi']] = att_cur.flatten()
-            v_n_cur = velocity.update(h, lat, wn_ie, wn_en, c_bn, wb_ib, v_n, dt)
-            ins_df.loc[cur, ['vN', 'vE', 'vD']] = v_n_cur.flatten()
-            pos_cur = position.update(rn, re, h, lat, p_e, v_n, dt)
-            ins_df.loc[cur, ['lat', 'long', 'h']] = pos_cur.flatten()
+            # Gather variables
+            [rn, re, wn_ie, wn_en, c_bn] = get_values(psi_nb, v_n, p_e)
 
+            # Predictions
+            [ins_df, att_cur, v_n_cur, pos_cur] = update_predictions(ins_df, psi_nb, p_e, v_n, wb_ib, c_bn, wn_ie,
+                                                                     wn_en, dt, rn, re, cur)
             # Iterate
             prev = cur
     print('Done')
