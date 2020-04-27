@@ -89,6 +89,8 @@ def solve(ins_df, pos_df, vel_df):
         if flag:
             prev = cur
             flag = False
+        elif cur == 424:
+            break
         else:
             dt = ins_df.dt.loc[cur]
 
@@ -118,4 +120,4 @@ def solve(ins_df, pos_df, vel_df):
                                                                           c_bn, v_n, cur, gyro_bias, acc_bias, vel_gps)
                 # Iterate
             prev = cur
-    print('Done')
+    return(ins_df)
