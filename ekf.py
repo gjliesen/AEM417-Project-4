@@ -1,10 +1,16 @@
-import pandas as pd
 import numpy as np
 import constants as cn
-import attitude
 import velocity
 import position
 from scipy.linalg import expm
+
+
+def calc_wn_in(wn_ie, wn_en):
+    return wn_ie + wn_en
+
+
+def calc_wb_nb(wn_in, wb_ib):
+    return wb_ib - wn_in + cn.gyro_bias
 
 
 def state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in):
@@ -30,7 +36,7 @@ def noise_model_matrix_m(c_nb):
     return M
 
 
-def f_matrix(A, dt):
+def get_f_matrix(A, dt):
     F = expm(A * dt)
     return F
 
@@ -38,14 +44,6 @@ def f_matrix(A, dt):
 def noise_covariance_q(A, M, dt):
     Q = (np.identity(15) + dt * A) @ (dt * M @ cn.S @ M.T)
     return Q
-
-
-def calc_wn_in(wn_ie, wn_en):
-    return wn_ie + wn_en
-
-
-def calc_wb_nb(wn_in, wb_ib):
-    return wb_ib - wn_in + cn.gyro_bias
 
 
 def calc_position_p_kk(pos_cur, F, Q):
@@ -67,7 +65,19 @@ def loose_state_matrix(pos_df, vel_df, cur, v_n_cur, pos_cur, K):
     del_x = K @ temp
     return del_x
 
-def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, K, c_nb):
-    state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in)
-    noise_model_matrix_m(c_nb)
-    noise_covariance_q(A, M, dt)
+
+def gnss_vs_predicted(del_x, v_n_cur):
+    del_y = cn.H @ del_x + v_n_cur
+    return del_y
+
+
+def get_state(pos_df, vel_df, cur, v_n_cur, pos_cur, c_nb, dt, wn_ie, wn_en, wn_in, wb_ib, g_n, f_b):
+    wn_in = calc_wn_in(wn_ie, wn_en)
+    wb_nb = calc_wb_nb(wn_in, wb_ib)
+    A = state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in)
+    M = noise_model_matrix_m(c_nb)
+    F = get_f_matrix(A, dt)
+    Q = noise_covariance_q(A, M, dt)
+    p_kk = calc_position_p_kk(pos_cur, F, Q)
+    K = noise_gain_matrix_k(p_kk)
+    del_x = loose_state_matrix(pos_df, vel_df, cur, v_n_cur, pos_cur, K)
