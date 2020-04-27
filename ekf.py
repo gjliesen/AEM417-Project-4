@@ -32,7 +32,8 @@ def noise_model_matrix_m(c_nb):
 
 def noise_covariance_q(A, M, dt):
     F = expm(A * dt)
-    Q = (np.identity(15) + dt * A) @ (dt * M @ S @ M.T)
+    Q = (np.identity(15) + dt * A) @ (dt * M @ cn.S @ M.T)
+    return Q
 
 
 def calc_wn_in(wn_ie, wn_en):
@@ -45,22 +46,6 @@ def calc_wb_nb(wn_in, wb_ib):
 
 def noise_gain_matrix():
     print('Placeholder')
-
-
-def gnss_noise_matrix():
-    H = np.array([[np.identity(6), np.zeros((6, 9))]])
-    return
-
-
-def r_diagonal_matrix():
-    R = np.diag([cn.sigma_p, cn.sigma_p, cn.sigma_p, cn.sigma_v, cn.sigma_v, cn.sigma_v])
-    return R
-
-
-def s_matrix():
-    S = np.diag([(0.12*9.81)**2, (0.12*9.81)**2, (0.12*9.81)**2, 0.01658**2, 0.01658**2,
-                 0.01658**2, cn.sigma_u_acc, cn.sigma_u_acc, cn.sigma_u_acc, cn.sigma_u_gyro, cn.sigma_u_gyro,
-                 cn.sigma_u_gyro])
 
 
 def loose_state_matrix(pos_df, vel_df, ins_df, cur, att_cur, v_n_cur, pos_cur, psi_nb):

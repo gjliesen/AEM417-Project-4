@@ -24,9 +24,18 @@ sigma_w_acc = 0.12 * g
 gyro_bias = np.array([[2.4*10**-4],
                       [-1.3*10**-4],
                       [5.6*10**-4]])
-sigma_b_gyro = 0.3
+sigma_b_gyro = np.deg2rad(0.3)
 tau_gyro = 300
-sigma_w_gyro = 0.95
+sigma_w_gyro = np.deg2rad(0.95)
 
 sigma_u_acc = np.sqrt((2 * sigma_b_acc**2)/tau_acc)
 sigma_u_gyro = np.sqrt((2 * sigma_b_gyro**2)/tau_gyro)
+
+S = np.diag([sigma_w_acc ** 2, sigma_w_acc ** 2, sigma_w_acc ** 2, sigma_w_gyro ** 2,
+             sigma_w_gyro ** 2, sigma_w_gyro ** 2, sigma_u_acc, sigma_u_acc, sigma_u_acc,
+             sigma_u_gyro, sigma_u_gyro, sigma_u_gyro])
+
+R = np.diag([sigma_p, sigma_p, sigma_p, sigma_v, sigma_v, sigma_v])
+
+
+H = np.array([[np.identity(6), np.zeros((6, 9))]])
