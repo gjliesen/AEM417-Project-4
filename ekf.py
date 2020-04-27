@@ -4,6 +4,7 @@ import constants as cn
 import attitude
 import velocity
 import position
+from scipy.linalg import expm
 
 
 def state_matrix_a(wn_en, g_n, wn_ie, c_nb, f_b, wn_in):
@@ -27,6 +28,11 @@ def noise_model_matrix_m(c_nb):
     row_5 = np.array([np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3)), np.identity(3)])
     M = np.vstack((row_1, row_2, row_3, row_4, row_5))
     return M
+
+
+def noise_covariance_q(A, M, dt):
+    F = expm(A * dt)
+    Q = (np.identity(15) + dt * A) @ (dt * M @ S @ M.T)
 
 
 def calc_wn_in(wn_ie, wn_en):
