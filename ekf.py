@@ -57,6 +57,12 @@ def r_diagonal_matrix():
     return R
 
 
+def s_matrix():
+    S = np.diag([(0.12*9.81)**2, (0.12*9.81)**2, (0.12*9.81)**2, 0.01658**2, 0.01658**2,
+                 0.01658**2, cn.sigma_u_acc, cn.sigma_u_acc, cn.sigma_u_acc, cn.sigma_u_gyro, cn.sigma_u_gyro,
+                 cn.sigma_u_gyro])
+
+
 def loose_state_matrix(pos_df, vel_df, ins_df, cur, att_cur, v_n_cur, pos_cur, psi_nb):
     pos_gps = position.extract_data(pos_df, cur)
     vel_gps = velocity.extract_data(vel_df, cur)
